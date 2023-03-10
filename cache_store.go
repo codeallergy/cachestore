@@ -74,6 +74,10 @@ func (t *cacheStore) Increment(ctx context.Context) *store.IncrementOperation {
 	return &store.IncrementOperation{DataStore: t, Context: ctx, Initial: 0, Delta: 1}
 }
 
+func (t *cacheStore) Touch(ctx context.Context) *store.TouchOperation {
+	return &store.TouchOperation{DataStore: t, Context: ctx}
+}
+
 func (t*cacheStore) Remove(ctx context.Context) *store.RemoveOperation {
 	return &store.RemoveOperation{DataStore: t, Context: ctx}
 }
@@ -142,6 +146,25 @@ func (t *cacheStore) UpdateRaw(ctx context.Context, key []byte, cb func(entry *s
 
 func (t*cacheStore) CompareAndSetRaw(ctx context.Context, key, value []byte, ttlSeconds int, version int64) (bool, error) {
 	return true, t.SetRaw(ctx, key, value, ttlSeconds)
+}
+
+func (t *cacheStore) TouchRaw(ctx context.Context, key []byte, ttlSeconds int) error {
+
+	var value []byte
+
+	if obj, ok := t.cache.Get(string(key)); ok && obj != nil {
+		if b, ok := obj.([]byte); ok {
+			value = b
+		}
+	}
+
+	ttl := cache.NoExpiration
+	if ttlSeconds > 0 {
+		ttl = time.Second * time.Duration(ttlSeconds)
+	}
+
+	t.cache.Set(string(key),value, ttl)
+	return nil
 }
 
 func (t*cacheStore) RemoveRaw(ctx context.Context, key []byte) error {
